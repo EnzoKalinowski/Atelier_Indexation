@@ -108,11 +108,11 @@ int main(void){
 		}
 	}
 
-	SavePGM_bmatrix(R,nrl,nrh,ncl,nch,"cube_conv_reponse_impulsionnelle.pgm");
-	SavePGM_bmatrix(Ix,nrl,nrh,ncl,nch,"cube_conv_SobelH.pgm");
-	SavePGM_bmatrix(Iy,nrl,nrh,ncl,nch,"cube_conv_SobelV.pgm");
-	SavePGM_bmatrix(G,nrl,nrh,ncl,nch,"cube_normeGradient.pgm");
-	SavePGM_bmatrix(C,nrl,nrh,ncl,nch,"cube_contour.pgm");
+	SavePGM_bmatrix(R,nrl,nrh,ncl,nch,"./img_test/cube_conv_reponse_impulsionnelle.pgm");
+	SavePGM_bmatrix(Ix,nrl,nrh,ncl,nch,"./img_test/cube_conv_SobelH.pgm");
+	SavePGM_bmatrix(Iy,nrl,nrh,ncl,nch,"./img_test/cube_conv_SobelV.pgm");
+	SavePGM_bmatrix(G,nrl,nrh,ncl,nch,"./img_test/cube_normeGradient.pgm");
+	SavePGM_bmatrix(C,nrl,nrh,ncl,nch,"./img_test/cube_contour.pgm");
 
 
 
