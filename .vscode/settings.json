@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "nralloc.h": "c",
+        "nrarith.h": "c"
+    }
+}
