@@ -7,7 +7,8 @@
 #include "nralloc.h"
 #include <math.h>
 
-#define TRESHOLD 15
+#define TRESHOLD 30
+#define COLOR_DIFFERENCE 10
 
 void sobel(byte **I, double **Ix, double **Iy, long nrl, long nrh, long ncl, long nch)
 {
@@ -35,9 +36,9 @@ void sobel(byte **I, double **Ix, double **Iy, long nrl, long nrh, long ncl, lon
 void convert_dmatrix_bmatrix(double **D, byte **B, long nrl, long nrh, long ncl, long nch)
 {
 
-	for(int i=nrl+1;i<nrh;i++)
+	for(int i=nrl;i<nrh;i++)
 	{	
-		for(int j=ncl+1;j<nch;j++)
+		for(int j=ncl;j<nch;j++)
 		{
 			B[i][j]=abs(D[i][j]);
 		}
@@ -113,6 +114,79 @@ void convert_rgb8_to_byte(rgb8 **I, byte **B, long nrl, long nrh, long ncl, long
 	}
 }
 
+int nb_pixel_contour(byte **B, long nrl, long nrh, long ncl, long nch)
+{
+	int i,j;
+	int sum=0;
+	for (i = nrl; i < nrh; i++)
+	{
+		for (j = ncl; j < nch; j++)
+		{
+			
+			sum+= B[i][j];
+		}
+	}
+
+	sum/=255;
+	return sum;
+}
+
+void count_rgb(rgb8 **I,int count[3],int colorDiff, long nrl, long nrh, long ncl, long nch)
+{
+	int i,j;
+	rgb8 Iij;
+	for (i = nrl; i < nrh; i++)
+	{
+		for (j = ncl; j < nch; j++)
+		{
+			Iij=I[i][j];
+			if((Iij.r>Iij.b+colorDiff) && (Iij.r>Iij.g+colorDiff))
+			{
+				count[0]++;
+			}
+			else 
+			{
+				if((Iij.g>Iij.r+colorDiff) && (Iij.g>Iij.b+colorDiff))
+				{
+					count[1]++;
+
+				}
+				else
+				{
+					if((Iij.b>Iij.r+colorDiff) && (Iij.b>Iij.g+colorDiff))
+					{
+						count[2]++;
+					}	
+				}
+			}
+				
+		}
+	}
+}
+
+void avg_color(rgb8 **I,rgb8 *avgColor, long nrl, long nrh, long ncl, long nch)
+{	
+	int i, j;
+	int r=0,g=0,b=0;
+	
+	for (i = nrl; i < nrh; i++)
+	{
+		for (j = ncl; j < nch; j++)
+		{
+			r+=I[i][j].r;
+			g+=I[i][j].g;
+			b+=I[i][j].b;
+		}
+	}
+
+	r/=(nrh*nch);
+	g/=(nrh*nch);
+	b/=(nrh*nch);
+	
+	avgColor->r=r;
+	avgColor->g=g;
+	avgColor->b=b;
+}
 
 int main()
 {
@@ -128,10 +202,24 @@ int main()
 	byte **Iy;
 	byte **binarized;
 	int *histogram;
+	int nbPixelContour;
+	int imgSize;
+	int count[3]={0,0,0};
+	rgb8 averageColor;
+
+
 	I=LoadPPM_rgb8matrix("./img_test/bus1.ppm",&nrl,&nrh,&ncl,&nch);
 
+	imgSize=nrh*nch;
+	printf("Image size : %d\n",imgSize);
 	grayscale=bmatrix(nrl,nrh,ncl,nch);
 
+	
+	count_rgb(I,&count,COLOR_DIFFERENCE,nrl,nrh,ncl,nch);
+	printf("Count of main colors : r: %d g: %d b: %d\n",count[0],count[1],count[2]);
+
+	avg_color(I,&averageColor,nrl,nrh,ncl,nch);
+	printf("Average color:  r: %d g: %d b: %d\n",averageColor.r,averageColor.g,averageColor.b);
 	convert_rgb8_to_byte(I,grayscale,nrl,nrh,ncl,nch);
 
 	histogram=ivector0(0,255);
@@ -142,9 +230,10 @@ int main()
 
 	Ix=bmatrix(nrl,nrh,ncl,nch);
 	Iy=bmatrix(nrl,nrh,ncl,nch);
-
-	binarized=bmatrix(nrl,nrh,ncl,nch);
 	R=bmatrix(nrl,nrh,ncl,nch);
+	binarized=bmatrix(nrl,nrh,ncl,nch);
+
+	
 
 	sobel(grayscale,SobelX,SobelY,nrl,nrh,ncl,nch);
 	norm_gradient(SobelX, SobelY, Sobel, nrl, nrh, ncl, nch);
@@ -154,10 +243,12 @@ int main()
 	convert_dmatrix_bmatrix(Sobel,R,nrl,nrh,ncl,nch);
 
 	binarize(R,binarized,TRESHOLD,nrl,nrh,ncl,nch);
+	nbPixelContour=nb_pixel_contour(binarized,nrl,nrh,ncl,nch);
+	printf("Contour pixel number: %d\n",nbPixelContour);
+
 	histogram_bmatrix(grayscale,nrl,nrh,ncl,nch,histogram);
-	
-	
 	print_histogram(histogram);
+
 	SavePPM_rgb8matrix(I,nrl,nrh,ncl,nch,"./img_test/imageTest.ppm");
 	SavePGM_bmatrix(grayscale,nrl,nrh,ncl,nch,"./img_test/grayscaleTest.pgm");
 	SavePGM_bmatrix(Ix,nrl,nrh,ncl,nch,"./img_test/sobelXTest.pgm");
@@ -171,7 +262,6 @@ int main()
 	free_bmatrix(Iy,nrl,nrh,ncl,nch);
 	free_bmatrix(R,nrl,nrh,ncl,nch);
 	free_bmatrix(binarized,nrl,nrh,ncl,nch);
-
 
 	free_dmatrix(SobelX,nrl,nrh,ncl,nch);
 	free_dmatrix(SobelY,nrl,nrh,ncl,nch);
