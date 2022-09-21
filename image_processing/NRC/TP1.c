@@ -7,9 +7,11 @@
 #include "nralloc.h"
 #include <math.h>
 
-#define TRESHOLD 30
+#define TRESHOLD 20
 #define COLOR_DIFFERENCE 10
-#define NB_IMAGES 10
+#define NB_IMAGES 500
+//#define TEST
+
 
 void sobel(byte **I, double **Ix, double **Iy, long nrl, long nrh, long ncl, long nch)
 {
@@ -136,6 +138,10 @@ void count_rgb(rgb8 **I,int count[3],int colorDiff, long nrl, long nrh, long ncl
 {
 	int i,j;
 	rgb8 Iij;
+	count[0]=0;
+	count[1]=0;
+	count[2]=0;
+	
 	for (i = nrl; i < nrh; i++)
 	{
 		for (j = ncl; j < nch; j++)
@@ -244,12 +250,94 @@ int main()
 	int count[3]={0,0,0};
 	rgb8 averageColor;
 	boolean isColorful;
-	byte avgNormGradient;
-
-	
+	byte avgNormGradient;	
 	char imgFolderPath[100]="./archive500ppm/";
 	char imgPath[100];
+	char txtFolderPath[100]="./img_caracteristics/";
+	char txtPath[100];
+#ifndef TEST
 
+	for (int i=1;i<=NB_IMAGES;i++)
+	{
+		sprintf(imgPath,"%s%d.%s",imgFolderPath,i,"ppm");
+
+		sprintf(txtPath,"%s%d.%s",txtFolderPath,i,"txt");
+
+		I=LoadPPM_rgb8matrix(imgPath,&nrl,&nrh,&ncl,&nch);
+
+		imgSize=nrh*nch;
+		grayscale=bmatrix(nrl,nrh,ncl,nch);
+
+		isColorful=is_colorful(I,nrl,nrh,ncl,nch);
+		count_rgb(I,&count,COLOR_DIFFERENCE,nrl,nrh,ncl,nch);
+
+		avg_color(I,&averageColor,nrl,nrh,ncl,nch);
+		convert_rgb8_to_byte(I,grayscale,nrl,nrh,ncl,nch);
+
+		histogram=ivector0(0,255);
+		
+		SobelX=dmatrix(nrl,nrh,ncl,nch);
+		SobelY=dmatrix(nrl,nrh,ncl,nch);
+		Sobel=dmatrix(nrl,nrh,ncl,nch);
+
+		Ix=bmatrix(nrl,nrh,ncl,nch);
+		Iy=bmatrix(nrl,nrh,ncl,nch);
+		R=bmatrix(nrl,nrh,ncl,nch);
+		binarized=bmatrix(nrl,nrh,ncl,nch);
+
+		sobel(grayscale,SobelX,SobelY,nrl,nrh,ncl,nch);
+		norm_gradient(SobelX, SobelY, Sobel, nrl, nrh, ncl, nch);
+
+		convert_dmatrix_bmatrix(SobelX,Ix,nrl,nrh,ncl,nch);
+		convert_dmatrix_bmatrix(SobelY,Iy,nrl,nrh,ncl,nch);
+		convert_dmatrix_bmatrix(Sobel,R,nrl,nrh,ncl,nch);
+
+		avg_norm_gradient(R,&avgNormGradient,nrl,nrh,ncl,nch);
+
+		binarize(R,binarized,TRESHOLD,nrl,nrh,ncl,nch);
+		nbPixelContour=nb_pixel_contour(binarized,nrl,nrh,ncl,nch);
+
+		histogram_bmatrix(grayscale,nrl,nrh,ncl,nch,histogram);
+
+		//création du fichier
+			FILE *fp = fopen(txtPath, "w");
+			if (fp == NULL)
+			{
+				printf("Error opening the file %s", txtPath);
+			}
+
+			//écrire plus haute valeur d'étiquette
+			fprintf(fp, "%d\n", imgSize);
+			fprintf(fp, "%d\n", (nbPixelContour));
+			fprintf(fp, "%d\n", avgNormGradient);
+			fprintf(fp, "%d\n", isColorful);
+			fprintf(fp, "%d,%d,%d\n", averageColor.r,averageColor.g,averageColor.b);
+			fprintf(fp, "%d,%d,%d\n", count[0],count[1],count[2]);
+			
+			for(int j=0;j<256;j++)
+			{
+				fprintf(fp, "%d,",histogram[j]);
+			}
+			fprintf(fp, "\n");
+
+
+
+		free_rgb8matrix(I,nrl,nrh,ncl,nch);
+		free_bmatrix(grayscale,nrl,nrh,ncl,nch);
+		free_bmatrix(Ix,nrl,nrh,ncl,nch);
+		free_bmatrix(Iy,nrl,nrh,ncl,nch);
+		free_bmatrix(R,nrl,nrh,ncl,nch);
+		free_bmatrix(binarized,nrl,nrh,ncl,nch);
+
+		free_dmatrix(SobelX,nrl,nrh,ncl,nch);
+		free_dmatrix(SobelY,nrl,nrh,ncl,nch);
+		free_dmatrix(Sobel,nrl,nrh,ncl,nch);
+			
+		}
+
+
+#endif
+#ifdef TEST
 	I=LoadPPM_rgb8matrix("./img_test/bus1.ppm",&nrl,&nrh,&ncl,&nch);
 
 	imgSize=nrh*nch;
@@ -295,21 +383,6 @@ int main()
 	histogram_bmatrix(grayscale,nrl,nrh,ncl,nch,histogram);
 	print_histogram(histogram);
 
-//--------------------------------------------------------------------------------------
-	
-	// sprintf(imgPath,"%s%s%d.%s",imgFolderPath,"fomd",i,"ppm");
-
-	// //création du fichier
-	// FILE *fp = fopen(filename, "w");
-    // if (fp == NULL)
-    // {
-    //   printf("Error opening the file %s", filename);
-    // }
-
-    // //écrire plus haute valeur d'étiquette
-    // fprintf(fp, "%d\n", maxLabel);
-//----------------------------------------------------------------------------------------
-
 	SavePPM_rgb8matrix(I,nrl,nrh,ncl,nch,"./img_test/imageTest.ppm");
 	SavePGM_bmatrix(grayscale,nrl,nrh,ncl,nch,"./img_test/grayscaleTest.pgm");
 	SavePGM_bmatrix(Ix,nrl,nrh,ncl,nch,"./img_test/sobelXTest.pgm");
@@ -327,6 +400,8 @@ int main()
 	free_dmatrix(SobelX,nrl,nrh,ncl,nch);
 	free_dmatrix(SobelY,nrl,nrh,ncl,nch);
 	free_dmatrix(Sobel,nrl,nrh,ncl,nch);
+
+#endif
 
 	return 0;
 
