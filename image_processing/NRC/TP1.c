@@ -9,6 +9,7 @@
 
 #define TRESHOLD 30
 #define COLOR_DIFFERENCE 10
+#define NB_IMAGES 10
 
 void sobel(byte **I, double **Ix, double **Iy, long nrl, long nrh, long ncl, long nch)
 {
@@ -188,6 +189,42 @@ void avg_color(rgb8 **I,rgb8 *avgColor, long nrl, long nrh, long ncl, long nch)
 	avgColor->b=b;
 }
 
+void avg_norm_gradient(byte **I,byte *avgNormGradient, long nrl, long nrh, long ncl, long nch)
+{	
+	int i, j;
+	int avg=0;
+	
+	for (i = nrl; i < nrh; i++)
+	{
+		for (j = ncl; j < nch; j++)
+		{
+			avg+=I[i][j];
+		}
+	}
+
+	avg/=(nrh*nch);
+
+	*avgNormGradient=avg;
+
+}
+
+boolean is_colorful(rgb8 **I,long nrl, long nrh, long ncl, long nch)
+{
+	int i, j;
+	
+	for (i = nrl; i < nrh; i++)
+	{
+		for (j = ncl; j < nch; j++)
+		{
+			if(I[i][j].r!=I[i][j].b || I[i][j].r!=I[i][j].g || I[i][j].b!=I[i][j].g)
+			{
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
+
 int main()
 {
 
@@ -206,7 +243,12 @@ int main()
 	int imgSize;
 	int count[3]={0,0,0};
 	rgb8 averageColor;
+	boolean isColorful;
+	byte avgNormGradient;
 
+	
+	char imgFolderPath[100]="./archive500ppm/";
+	char imgPath[100];
 
 	I=LoadPPM_rgb8matrix("./img_test/bus1.ppm",&nrl,&nrh,&ncl,&nch);
 
@@ -214,7 +256,8 @@ int main()
 	printf("Image size : %d\n",imgSize);
 	grayscale=bmatrix(nrl,nrh,ncl,nch);
 
-	
+	isColorful=is_colorful(I,nrl,nrh,ncl,nch);
+	printf("Is colorful: %s\n", isColorful ? "true" : "false");
 	count_rgb(I,&count,COLOR_DIFFERENCE,nrl,nrh,ncl,nch);
 	printf("Count of main colors : r: %d g: %d b: %d\n",count[0],count[1],count[2]);
 
@@ -242,12 +285,30 @@ int main()
 	convert_dmatrix_bmatrix(SobelY,Iy,nrl,nrh,ncl,nch);
 	convert_dmatrix_bmatrix(Sobel,R,nrl,nrh,ncl,nch);
 
+	avg_norm_gradient(R,&avgNormGradient,nrl,nrh,ncl,nch);
+	printf("Average norm gradient value: %d\n",avgNormGradient);
+
 	binarize(R,binarized,TRESHOLD,nrl,nrh,ncl,nch);
 	nbPixelContour=nb_pixel_contour(binarized,nrl,nrh,ncl,nch);
 	printf("Contour pixel number: %d\n",nbPixelContour);
 
 	histogram_bmatrix(grayscale,nrl,nrh,ncl,nch,histogram);
 	print_histogram(histogram);
+
+//--------------------------------------------------------------------------------------
+	
+	// sprintf(imgPath,"%s%s%d.%s",imgFolderPath,"fomd",i,"ppm");
+
+	// //création du fichier
+	// FILE *fp = fopen(filename, "w");
+    // if (fp == NULL)
+    // {
+    //   printf("Error opening the file %s", filename);
+    // }
+
+    // //écrire plus haute valeur d'étiquette
+    // fprintf(fp, "%d\n", maxLabel);
+//----------------------------------------------------------------------------------------
 
 	SavePPM_rgb8matrix(I,nrl,nrh,ncl,nch,"./img_test/imageTest.ppm");
 	SavePGM_bmatrix(grayscale,nrl,nrh,ncl,nch,"./img_test/grayscaleTest.pgm");
